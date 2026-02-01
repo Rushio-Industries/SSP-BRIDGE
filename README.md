@@ -8,8 +8,7 @@ This project focuses on clarity, openness, and community-driven extensibility, i
 
 🚦 Project Status
 
-v0.2.1 – Stable
-(v0.2.2 in development)
+v0.2.2 – Stable
 
 ✅ Plugin-first architecture
 
@@ -118,6 +117,11 @@ SSP-BRIDGE exposes a capabilities file describing all available signals:
 Default path: logs/capabilities.[plugin_id].json
 
 Purpose: Allows dashboards and tools to adapt automatically and avoids hardcoded assumptions per simulator
+
+📚 Documentation
+
+- [SSP Schema](docs/schema.md)
+- [CLI Reference](docs/cli.md)
 
 ⚡ Quick Start (Windows)
 Requirements
