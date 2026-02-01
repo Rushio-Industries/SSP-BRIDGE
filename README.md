@@ -182,6 +182,9 @@ Contributions are welcome — especially:
 
 MIT License
 
-© Rushio Industries
+## About the Founder
+Created and maintained by **Muzonho**, founder of Rushio Industries.  
+This project started as a personal tool to unify fragmented sim racing telemetry — now open for everyone.  
+© 2026 Rushio Industries
 
 ```

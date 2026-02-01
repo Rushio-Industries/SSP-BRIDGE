@@ -33,13 +33,12 @@ def _speed_kmh_from_velocity(phys: Any) -> float:
 
 
 def _pick_speed_kmh(phys: Any) -> float:
-    # speed do jogo (km/h) — Assetto Corsa shared memory
+    # (km/h) — Assetto Corsa shared memory
     try:
         sk = float(phys.speedKmh)
     except Exception:
         return 0.0
 
-    # HUD geralmente não mostra velocidade negativa (mesmo em ré)
     sk = abs(sk)
 
     # sanity check
@@ -89,7 +88,6 @@ def to_ssp_frame_ac(
         },
     }
 
-    # metadados opcionais (não atrapalha quem não usa)
     if car_name or car_class:
         frame["car"] = {}
         if car_name:
