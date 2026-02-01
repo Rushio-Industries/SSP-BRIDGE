@@ -10,23 +10,16 @@ This project focuses on **clarity, openness, and community-driven extensibility*
 
 ## 🚦 Project Status
 
-**v0.1.0 – Stable (Assetto Corsa)**
-
-- ✅ Assetto Corsa Shared Memory support  
-- ✅ Universal SSP Frame v0.1  
-- ✅ NDJSON logging  
-- ✅ WebSocket real-time telemetry streaming  
-- ✅ Feature discovery via capabilities file## 🚦 Project Status
-
-**v0.2.1 – Stable**
+**v2.0 – Stable**
 
 - ✅ Plugin-first architecture
 - ✅ CLI support (`--game ac`, `--game auto`)
 - ✅ Assetto Corsa Shared Memory plugin
-- ✅ Universal SSP Frame v0.2
+- ✅ Universal SSP Frame v2.0
 - ✅ NDJSON logging
-- ✅ WebSocket real-time telemetry
-- ✅ Automatic plugin selection (`--game auto`)  
+- ✅ WebSocket real-time telemetry streaming
+- ✅ Automatic plugin selection (`--game auto`) 
+- ✅ Feature discovery via capabilities file
 
 More simulators and features are planned.
 
@@ -46,57 +39,62 @@ Sim racing telemetry is fragmented: each simulator exposes data differently, mak
 
 ## 🧩 Architecture Overview
 
-```
 
+
+```text
 Simulator (AC, AMS2, ACC, ...)
-↓
-SSP-BRIDGE
-↓
+        ↓
+    SSP-BRIDGE
+        ↓
 Universal SSP Frame
-↓
+        ↓
 Dashboards · Tools · Hardware · Analytics
 
-````
+```
 
-Key principles:
-- Modular plugins per simulator
-- Clear separation between input, core, and outputs
-- No dependency on proprietary tools (e.g. SimHub)
+**Key principles:**
+
+* Modular plugins per simulator
+* Clear separation between input, core, and outputs
+* No dependency on proprietary tools (e.g. SimHub)
 
 ---
 
 ## 📦 Supported Simulator
 
 ### Assetto Corsa
-- Data source: Shared Memory
-- Signals available in v0.1:
-  - Engine RPM
-  - Vehicle speed (km/h)
-  - Gear
-  - Throttle (%)
-  - Brake (%)
+
+* **Data source:** Shared Memory
+* **Signals available in v2.0:**
+* Engine RPM
+* Vehicle speed (km/h)
+* Gear
+* Throttle (%)
+* Brake (%)
+
+
 
 ---
 
 ## 📤 Outputs
 
 ### NDJSON (Log File)
-- Path: `logs/session.ndjson`
-- One JSON object per frame
-- Ideal for logging, replay, and analysis
+
+* **Path:** `logs/session.ndjson`
+* One JSON object per frame. Ideal for logging, replay, and analysis.
 
 ### WebSocket (Live Stream)
-- URL: `ws://127.0.0.1:8765`
-- Real-time telemetry streaming
-- Ideal for dashboards and live tools
+
+* **URL:** `ws://127.0.0.1:8765`
+* Real-time telemetry streaming. Ideal for dashboards and live tools.
 
 ---
 
-## 📐 SSP Frame Example
+## 📐 SSP Frame Example (v2.0)
 
 ```json
 {
-  "v": "0.2",
+  "v": "2.0",
   "ts": 1769902700.94,
   "source": "ac",
   "signals": {
@@ -107,7 +105,8 @@ Key principles:
     "controls.brake_pct": 0.0
   }
 }
-````
+
+```
 
 ---
 
@@ -115,11 +114,8 @@ Key principles:
 
 SSP-BRIDGE exposes a capabilities file describing all available signals:
 
-* Path: `logs/capabilities.ac.json`
-* Purpose:
-
-  * Allows dashboards/tools to adapt automatically
-  * Avoids hardcoded assumptions per simulator
+* **Path:** `logs/capabilities.[plugin_id].json`
+* **Purpose:** Allows dashboards/tools to adapt automatically and avoids hardcoded assumptions per simulator.
 
 ---
 
@@ -132,19 +128,24 @@ SSP-BRIDGE exposes a capabilities file describing all available signals:
 
 ### Steps
 
+1. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
-python app.py --game ac
 
-Or let SSP-BRIDGE automatically select a compatible simulator:
-
-python app.py --game auto
 ```
 
-Then:
 
-* Start driving in Assetto Corsa
-* Telemetry will be available via WebSocket and NDJSON
+2. **Run the bridge:**
+```bash
+# Specify the game
+python app.py --game ac
+
+# Or let SSP-BRIDGE automatically select a compatible simulator
+python app.py --game auto
+
+```
+
+
 
 ---
 
@@ -159,16 +160,10 @@ Then:
 
 ## 🗺️ Roadmap (High Level)
 
-- v0.2.x: Core platform stabilization
-  - Plugin loader and CLI
-  - Automatic plugin selection
-  - Output configuration flags
-
-- v0.3: Additional simulators (AMS2 / ACC)
-
-- v0.4: Hardware-oriented outputs (serial / UDP / CAN)
-
-- v1.0: Stable SSP specification and SDKs
+* **v2.x:** Core platform stabilization and output configuration flags
+* **v3.0:** Additional simulators (AMS2 / ACC)
+* **v4.0:** Hardware-oriented outputs (Serial / UDP / CAN)
+* **v5.0:** Stable SSP specification and SDKs
 
 ---
 
@@ -181,11 +176,12 @@ Contributions are welcome — especially:
 * Dashboard integrations
 * Documentation improvements
 
-Open an issue before large changes.
-
 ---
 
 ## 📄 License
 
 MIT License
+
 © Rushio Industries
+
+```
