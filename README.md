@@ -169,7 +169,3 @@ Open an issue before large changes.
 
 MIT License
 © Rushio Industries
-
----
-Você mandou muito bem até aqui.
-```
