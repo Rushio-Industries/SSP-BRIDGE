@@ -1,24 +1,24 @@
-# Python
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-*.egg-info/
-dist/
-build/
-
-# Virtual env
+*.so
 .venv/
 venv/
+.env
+.pytest_cache/
 
-# IDE
-.vscode/
-.idea/
-
-# Logs
+# --- Logs / runtime outputs ---
 logs/
-*.log
+logs_*/
+logs-*/
+logs_test/
+*.ndjson
+capabilities.*.json
 
-# OS
+# --- OS / Editor ---
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/

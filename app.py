@@ -84,7 +84,7 @@ async def main():
         except Exception as e:
             if args.wait == "off":
                 raise RuntimeError(f"Failed to open simulator ({args.game}): {e}") from e
-            print(f"Waiting for simulator ({args.game})...")
+            print(f"Waiting for simulator ({args.game})... ({e})")
             await asyncio.sleep(max(args.wait_interval, 0.2))
 
     print(f"{plugin.name} detected, starting telemetry.")
