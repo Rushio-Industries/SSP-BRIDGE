@@ -1,6 +1,6 @@
-CAPABILITIES_AC_V01 = {
+CAPABILITIES_AC = {
   "plugin": "ac",
-  "schema": "ssp/0.2",
+  "schema": "ssp/0.2.1",
   "signals": {
     "engine.rpm": {"unit": "rpm", "hz": 60},
     "vehicle.speed_kmh": {"unit": "km/h", "hz": 60},

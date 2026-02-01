@@ -5,7 +5,7 @@ from typing import Any, Dict
 from ssp_bridge.plugins.base import TelemetryPlugin
 from ssp_bridge.plugins.ac.shared_memory import ACPhysicsView
 from ssp_bridge.core.frame import to_ssp_frame_ac
-from ssp_bridge.core.capabilities import CAPABILITIES_AC_V01
+from ssp_bridge.core.capabilities import CAPABILITIES_AC
 
 
 class ACPlugin(TelemetryPlugin):
@@ -24,7 +24,7 @@ class ACPlugin(TelemetryPlugin):
         return to_ssp_frame_ac(self._phys.data)
 
     def capabilities(self) -> Dict[str, Any]:
-        return CAPABILITIES_AC_V01
+        return CAPABILITIES_AC
 
     def close(self) -> None:
         if self._phys is not None:
