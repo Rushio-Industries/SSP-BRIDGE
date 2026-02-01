@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+from datetime import datetime
 
 import websockets
 
@@ -20,10 +21,48 @@ def parse_args():
     p.add_argument("--ndjson", choices=["on", "off"], default="on", help="enable NDJSON logging")
     p.add_argument("--ws", choices=["on", "off"], default="on", help="enable WebSocket streaming")
 
+    # capabilities
+    p.add_argument("--capabilities", default="auto",
+                   help="capabilities output: auto | off | <path>")
+
+    # session naming for ndjson
+    p.add_argument("--session", default="auto",
+                   help="ndjson session name: auto | <name>")
+
+    # waiting behavior
+    p.add_argument("--wait", choices=["on", "off"], default="on", help="wait for simulator to be available")
+    p.add_argument("--wait-interval", type=float, default=2.0, help="seconds between retry attempts")
+
     # websocket config
     p.add_argument("--ws-host", default="127.0.0.1")
     p.add_argument("--ws-port", type=int, default=8765)
     return p.parse_args()
+
+
+# --- Helpers ---
+
+def make_session_filename(args) -> str:
+    if args.session.strip().lower() == "auto":
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        return f"session-{ts}.ndjson"
+    
+    name = args.session.strip()
+    if not name:
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        name = f"session-{ts}"
+    
+    if not name.endswith(".ndjson"):
+        name += ".ndjson"
+    return name
+
+
+def resolve_capabilities_path(args, out_dir: Path, plugin_id: str) -> Path | None:
+    mode = args.capabilities.strip().lower()
+    if mode == "off":
+        return None
+    if mode == "auto":
+        return out_dir / f"capabilities.{plugin_id}.json"
+    return Path(args.capabilities)
 
 
 async def main():
@@ -31,25 +70,40 @@ async def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Plugin Initialization ---
-    if args.game.strip().lower() == "auto":
-        plugin = auto_detect_plugin()
-    else:
-        plugin = create_plugin(args.game)
-    
-    plugin.open()
+    # --- Plugin Initialization (with optional waiting) ---
+    game = args.game.strip().lower()
+    plugin = None
+
+    while plugin is None:
+        try:
+            if game == "auto":
+                plugin = auto_detect_plugin()  # Já vem aberto pelo registry
+            else:
+                plugin = create_plugin(game)
+                plugin.open()
+        except Exception as e:
+            if args.wait == "off":
+                raise RuntimeError(f"Failed to open simulator ({args.game}): {e}") from e
+            print(f"Waiting for simulator ({args.game})...")
+            await asyncio.sleep(max(args.wait_interval, 0.2))
+
+    print(f"{plugin.name} detected, starting telemetry.")
 
     # --- Capabilities Export ---
-    cap_path = out_dir / f"capabilities.{plugin.id}.json"
-    cap_path.write_text(
-        json.dumps(plugin.capabilities(), indent=2, ensure_ascii=False), 
-        encoding="utf-8"
-    )
+    cap_path = resolve_capabilities_path(args, out_dir, plugin.id)
+    if cap_path is not None:
+        cap_path.parent.mkdir(parents=True, exist_ok=True)
+        cap_path.write_text(
+            json.dumps(plugin.capabilities(), indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
 
     # --- Output Handlers Setup ---
     nd = None
+    nd_path = None
     if args.ndjson == "on":
-        nd = NdjsonWriter(out_dir / "session.ndjson")
+        nd_path = out_dir / make_session_filename(args)
+        nd = NdjsonWriter(str(nd_path))
 
     # --- WebSocket Server Setup ---
     ws = None
@@ -58,40 +112,65 @@ async def main():
         ws = WSBroadcaster()
         server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
 
-    # --- Prints de Status ---
-    print(f"SSP-BRIDGE v0.2.1")
+    # --- Status Feedback ---
+    print(f"SSP-BRIDGE v0.2.2")
     print(f"Plugin: {plugin.id} - {plugin.name}")
-    print(f"Capabilities: {cap_path}")
-    print(f"NDJSON: {out_dir / 'session.ndjson' if args.ndjson == 'on' else 'off'}")
+    print(f"Capabilities: {cap_path if cap_path else 'off'}")
+    print(f"NDJSON: {nd_path if nd else 'off'}")
     print(f"WebSocket: ws://{args.ws_host}:{args.ws_port}" if args.ws == "on" else "WebSocket: off")
 
     # --- Main Loop ---
     period = 1.0 / max(args.hz, 1.0)
     try:
         while True:
-            frame = plugin.read_frame()
+            try:
+                frame = plugin.read_frame()
+            except Exception as e:
+                if args.wait == "on":
+                    print(f"Telemetry lost ({e}). Waiting for simulator...")
+                    try:
+                        plugin.close()
+                    except Exception:
+                        pass
+                    plugin = None
 
-            if frame:
-                if nd is not None:
-                    nd.write(frame)
+                    while plugin is None:
+                        try:
+                            if game == "auto":
+                                plugin = auto_detect_plugin()
+                            else:
+                                plugin = create_plugin(game)
+                                plugin.open()
+                        except Exception:
+                            await asyncio.sleep(max(args.wait_interval, 0.2))
 
-                if ws is not None:
-                    await ws.broadcast(frame)
+                    print(f"{plugin.name} detected, resuming telemetry.")
+                    continue
+                else:
+                    raise
+
+            if nd:
+                nd.write(frame)
+
+            if ws:
+                await ws.broadcast(frame)
 
             await asyncio.sleep(period)
-            
+
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
         # --- Cleanup ---
-        if server is not None:
+        if server:
             server.close()
             await server.wait_closed()
 
-        if nd is not None:
+        if nd:
             nd.close()
 
-        plugin.close()
+        if plugin:
+            plugin.close()
+            
         print("\nBridge closed.")
 
 
