@@ -15,7 +15,7 @@ logs_*/
 logs-*/
 logs_test/
 *.ndjson
-capabilities.*.json
+logs*/capabilities.*.json
 
 # --- OS / Editor ---
 .DS_Store

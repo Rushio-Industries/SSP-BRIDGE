@@ -1,102 +1,54 @@
-SSP-BRIDGE
+# SSP-BRIDGE
 
-SimRacing Standard Protocol Bridge
+**SimRacing Standard Protocol Bridge**
 
-SSP-BRIDGE is a lightweight, extensible telemetry bridge designed to normalize sim racing data into a universal protocol, enabling plug-and-play dashboards, tools, and future hardware integrations.
+SSP-BRIDGE is a lightweight telemetry bridge that **normalizes sim racing data into a universal JSON schema** (SSP),
+so dashboards/tools can be built once and work across simulators.
 
-This project focuses on clarity, openness, and community-driven extensibility, inspired by platforms like Arduino — but for sim racing telemetry.
+---
 
-🚦 Project Status
+## 🚦 Project Status
 
-v0.2.2 – Stable
+**v0.3.0 – Stable core + AC/ACC support**
 
-✅ Plugin-first architecture
+✅ Plugin-first architecture  
+✅ CLI (`--game ac|acc|auto`)  
+✅ NDJSON session logging  
+✅ WebSocket real-time streaming  
+✅ Capabilities export for feature discovery  
+✅ Unified SSP frame + capabilities format across plugins  
 
-✅ CLI support (--game ac, --game auto)
+---
 
-✅ Assetto Corsa Shared Memory plugin
+## 🎯 Vision
 
-✅ Universal SSP Frame schema v0.2
+Sim telemetry is fragmented: each simulator exposes different shapes/units.
+SSP-BRIDGE provides:
 
-✅ NDJSON session logging
+- A **standardized telemetry frame**
+- A simple bridge from simulator → apps/hardware
+- **Capabilities** so clients adapt automatically (no hardcoding per sim)
 
-✅ WebSocket real-time telemetry streaming
+---
 
-✅ Automatic plugin selection (--game auto)
+## 📦 Supported Simulators
 
-✅ Feature discovery via capabilities file
+### Assetto Corsa (`ac`)
+Shared Memory source (`acpmf_physics`).
 
-More simulators and features are planned.
+### Assetto Corsa Competizione (`acc`)
+WinAPI shared memory mapping (`Local\acpmf_physics`).
 
-🎯 Vision
+> **Note about `--game auto`:** ACC is tried first to avoid false positives,
+because AC's mapping can be created even when the game isn't running.
 
-Sim racing telemetry is fragmented: each simulator exposes data differently, making dashboards, tools, and hardware harder to build and maintain.
+---
 
-SSP-BRIDGE aims to solve this by:
+## 📐 SSP Frame (schema v0.2)
 
-Providing a standardized telemetry schema
+Example frame:
 
-Acting as a bridge between simulators and applications
-
-Making telemetry easy to consume, extend, and reuse
-
-Enabling future plug-and-play hardware dashboards
-
-🧩 Architecture Overview
-Simulator (AC, AMS2, ACC, ...)
-        ↓
-      Plugin
-        ↓
-   SSP-BRIDGE Core
-        ↓
- Universal SSP Frame
-        ↓
-Dashboards · Tools · Hardware · Analytics
-
-
-Key principles:
-
-Modular plugins per simulator
-
-Clear separation between input, core, and outputs
-
-No dependency on proprietary tools (e.g. SimHub)
-
-📦 Supported Simulator
-Assetto Corsa
-
-Data source: Shared Memory
-
-Signals available (schema v0.2):
-
-Engine RPM
-
-Vehicle speed (km/h)
-
-Gear
-
-Throttle (%)
-
-Brake (%)
-
-📤 Outputs
-NDJSON (Log File)
-
-Default path: logs/session-YYYYMMDD-HHMMSS.ndjson
-
-One JSON object per frame
-
-Ideal for logging, replay, and analysis
-
-WebSocket (Live Stream)
-
-Default URL: ws://127.0.0.1:8765
-
-Real-time telemetry streaming
-
-Ideal for dashboards and live tools
-
-📐 SSP Frame Example (schema v0.2)
+```json
 {
   "v": "0.2",
   "ts": 1769902700.94,
@@ -109,81 +61,84 @@ Ideal for dashboards and live tools
     "controls.brake_pct": 0.0
   }
 }
+```
 
-🔍 Feature Discovery (Capabilities)
+Signals currently standardized across AC + ACC:
 
-SSP-BRIDGE exposes a capabilities file describing all available signals:
+- `engine.rpm`
+- `vehicle.speed_kmh`
+- `drivetrain.gear`
+- `controls.throttle_pct`
+- `controls.brake_pct`
+- *(no clutch by design for now)*
 
-Default path: logs/capabilities.[plugin_id].json
+---
 
-Purpose: Allows dashboards and tools to adapt automatically and avoids hardcoded assumptions per simulator
+## 🔍 Feature Discovery (Capabilities)
 
-📚 Documentation
+A capabilities file describes which signals exist + metadata (type/unit/hz).
+
+Default path:
+
+- `logs/capabilities.<plugin_id>.json`
+
+---
+
+## 📤 Outputs
+
+### NDJSON (log file)
+- Default: `logs/session-YYYYMMDD-HHMMSS.ndjson`
+- 1 JSON object per line (easy replay/analysis)
+
+### WebSocket (live stream)
+- Default: `ws://127.0.0.1:8765`
+- Real-time telemetry streaming for dashboards/tools
+
+---
+
+## ⚡ Quick Start (Windows)
+
+### Requirements
+- Python 3.12+
+- Run a supported simulator **in-session**
+
+### Install
+```bash
+pip install -r requirements.txt
+```
+
+### Run
+```bash
+# Pick explicitly
+python app.py --game ac
+python app.py --game acc
+
+# Or auto-detect
+python app.py --game auto
+```
+
+---
+
+## 📚 Documentation
 
 - [SSP Schema](docs/schema.md)
 - [CLI Reference](docs/cli.md)
 
-⚡ Quick Start (Windows)
-Requirements
+---
 
-Python 3.12+
+## 🗺️ Roadmap (High Level)
 
-Assetto Corsa (running and in-session)
+- **v0.3.x:** Expand game support while keeping SSP output stable
+- **v0.4:** Hardware-oriented outputs (Serial / UDP / CAN)
+- **v1.0:** Stable SSP specification + SDKs
 
-Steps
+---
 
-Install dependencies
-
-pip install -r requirements.txt
-
-
-Run the bridge
-
-# Specify the simulator
-python app.py --game ac
-
-# Or let SSP-BRIDGE automatically select a compatible simulator
-python app.py --game auto
-
-🛠️ Development Philosophy
-
-Minimal dependencies
-
-Explicit, readable code
-
-No hidden magic
-
-Built to scale from software → hardware
-
-🗺️ Roadmap (High Level)
-
-v0.2.x: Core stabilization, usability, and output configuration
-
-v0.3: Additional simulators (AMS2 / ACC)
-
-v0.4: Hardware-oriented outputs (Serial / UDP / CAN)
-
-v1.0: Stable SSP specification and SDKs
-
-🤝 Contributing
-
-Contributions are welcome — especially:
-
-New simulator plugins
-
-Additional telemetry signals
-
-Dashboard integrations
-
-Documentation improvements
-
-📄 License
+## 📄 License
 
 MIT License
 
-About the Founder
+---
 
-Created and maintained by Muzonho, founder of Rushio Industries.
-This project started as a personal tool to unify fragmented sim racing telemetry — now open for everyone.
-
+Created and maintained by Muzonho (Rushio Industries).  
 © 2026 Rushio Industries

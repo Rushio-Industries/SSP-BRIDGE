@@ -12,8 +12,8 @@ from ssp_bridge.outputs.ws import WSBroadcaster
 
 
 def parse_args():
-    p = argparse.ArgumentParser(prog="ssp-bridge")
-    p.add_argument("--game", default="ac", help="plugin id (e.g. ac, auto)")
+    p = argparse.ArgumentParser(prog="ssp-bridge", description="SimRacing Standard Protocol Bridge")
+    p.add_argument("--game", default="ac", help="plugin id (ac, acc, auto)")
     p.add_argument("--hz", type=float, default=60.0, help="loop frequency (default: 60)")
 
     # outputs
@@ -113,7 +113,7 @@ async def main():
         server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
 
     # --- Status Feedback ---
-    print(f"SSP-BRIDGE v0.2.2")
+    print("SSP-BRIDGE v0.3.0")
     print(f"Plugin: {plugin.id} - {plugin.name}")
     print(f"Capabilities: {cap_path if cap_path else 'off'}")
     print(f"NDJSON: {nd_path if nd else 'off'}")
@@ -148,6 +148,10 @@ async def main():
                     continue
                 else:
                     raise
+
+            if frame is None:
+                await asyncio.sleep(period)
+                continue
 
             if nd:
                 nd.write(frame)

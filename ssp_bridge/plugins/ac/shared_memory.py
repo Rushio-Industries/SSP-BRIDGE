@@ -12,7 +12,7 @@ class SPageFilePhysics(ctypes.Structure):
         ("rpms", ctypes.c_int),
         ("steerAngle", ctypes.c_float),
         ("speedKmh", ctypes.c_float),
-        ("velocity", ctypes.c_float * 3),  # <<< add isso
+        ("velocity", ctypes.c_float * 3),
     ]
 
 

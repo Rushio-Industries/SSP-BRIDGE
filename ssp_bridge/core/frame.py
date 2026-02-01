@@ -55,7 +55,7 @@ def to_ssp_frame_ac(
     car_class: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Converte leitura do AC (SPageFilePhysics) para o SSP Frame v0.1.
+    Converte leitura do AC (SPageFilePhysics) para o SSP Frame v0.2.
 
     Espera que `phys` tenha ao menos:
       - rpms (int)
@@ -76,7 +76,7 @@ def to_ssp_frame_ac(
     speed_kmh = _pick_speed_kmh(phys)
 
     frame: Dict[str, Any] = {
-        "v": "0.1",
+        "v": "0.2",
         "ts": _now_ts(),
         "source": "ac",
         "signals": {
