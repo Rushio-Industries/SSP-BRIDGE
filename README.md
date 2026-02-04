@@ -1,72 +1,158 @@
+Com certeza! Mantive exatamente a **estrutura visual e a filosofia** do seu layout antigo ("SimRacing Standard Protocol Bridge"), mas atualizei todo o conteúdo técnico para refletir a **versão v0.3.2** (suporte a AMS2, ACC, sistema de *handshake*, detecção de processos no Windows, etc.).
+
+Aqui está o resultado unificado:
+
+---
+
 # SSP-BRIDGE
 
-**SSP-BRIDGE** is a lightweight telemetry bridge designed to normalize and forward simulator data to dashboards, external devices, and long-running monitoring tools.
+**SimRacing Standard Protocol Bridge**
 
-The project focuses on runtime stability, dynamic simulator switching, and capability-driven outputs, allowing clients to adapt without game-specific logic.
+SSP-BRIDGE is a lightweight, extensible telemetry bridge designed to normalize sim racing data into a universal protocol, enabling plug-and-play dashboards, tools, and future hardware integrations.
 
----
-
-## v0.3.2 – Dynamic Runtime & Dashboard Foundation
-
-SSP-BRIDGE v0.3.2 introduces a dynamic runtime layer designed for long-running telemetry sessions and future dashboards.
-
-The bridge is now state-driven, process-aware (on Windows), and capable of switching simulators at runtime without restarts.
+The project focuses on **runtime stability, dynamic simulator switching, and capability-driven outputs**, allowing clients to adapt without game-specific logic.
 
 ---
 
-## Key Features
+## 🚦 Project Status
 
-* **Dynamic Auto-detect**
-Automatically switches between supported simulators at runtime (`--game auto`). No restart is required when closing one simulator and opening another.
-* **Runtime Status Events**
-The bridge emits explicit lifecycle events via NDJSON and WebSocket to avoid state spam:
-* `waiting` – No simulator detected.
-* `active` – Telemetry flowing.
-* `lost` – Simulator disconnected or stalled.
+**v0.3.2 – Dynamic Runtime & Dashboard Foundation**
 
+* ✅ **Dynamic Auto-detect** (Switches games at runtime without restart)
+* ✅ **Process-Aware** (Smart detection for AC/ACC on Windows)
+* ✅ **Runtime Status Events** (`waiting`, `active`, `lost`)
+* ✅ **Capabilities Handshake** (Full signal map on connect)
+* ✅ **Smarter Probing** (Active only on real telemetry data)
+* ✅ **NDJSON & WebSocket** (With sticky state support)
 
-* **Capabilities Handshake**
-On simulator connect or switch, SSP-BRIDGE emits a full capabilities map, allowing dashboards to adapt dynamically:
+---
+
+## 🎯 Vision
+
+Sim racing telemetry is fragmented: each simulator exposes data differently, making dashboards, tools, and hardware harder to build and maintain.
+
+**SSP-BRIDGE aims to solve this by:**
+
+* Providing a **standardized telemetry schema** (`ssp/0.2`)
+* Acting as a **persistent state machine** between simulators and apps
+* Making telemetry **easy to consume, extend, and reuse**
+* ensuring **dashboards remain connected** even when simulators restart
+
+---
+
+## 🧩 Architecture Overview
+
+```text
+Simulator (AC, ACC, AMS2)
+        ↓
+   SSP-BRIDGE  ←  (State Machine: Waiting / Active / Lost)
+        ↓
+ Universal SSP Frame
+        ↓
+Dashboards · Tools · Hardware · Analytics
+
+```
+
+**Key principles:**
+
+* **State-Driven:** Explicit lifecycle events prevent "state spam".
+* **Process-Aware:** Prioritizes running processes to avoid false positives (Windows).
+* **Capability-First:** Clients adapt based on the handshake, not hardcoded assumptions.
+
+---
+
+## 📦 Supported Simulators
+
+### Assetto Corsa (AC)
+
+* **Detection:** Process priority + Shared Memory.
+
+### Assetto Corsa Competizione (ACC)
+
+* **Detection:** Process priority + Shared Memory.
+
+### Automobilista 2 (AMS2)
+
+* **Detection:** Shared Memory polling.
+
+---
+
+## 📤 Outputs
+
+### NDJSON (Log File / Stdout)
+
+* **Format:** One JSON object per frame.
+* **Use case:** Logging, replay, and post-session analysis.
+
+### WebSocket (Real-Time)
+
+* **Behavior:** Sticky state (clients receive the last known state on connect).
+* **Use case:** Live dashboards and overlay tools.
+
+---
+
+## 📐 SSP Frame Example (v0.3.2)
+
+**1. Capabilities Handshake (On Connect/Switch):**
+
 ```json
 {
   "type": "capabilities",
   "schema": "ssp/0.2",
   "source": "acc",
-  "capabilities": { ... }
+  "capabilities": {
+    "engine.rpm": { "type": "int", "min": 0, "max": 10000 },
+    "vehicle.speed_kmh": { "type": "float" }
+  }
 }
 
 ```
 
+**2. Telemetry Frame (Active):**
 
-* **Smarter Probing**
-A simulator plugin only becomes active after producing real telemetry frames. This avoids false positives caused by idle shared memory, open UDP ports, or inactive menus.
-* **AC / ACC Process Awareness (Windows)**
-When running in auto mode on Windows, SSP-BRIDGE prioritizes Assetto Corsa (AC) and Assetto Corsa Competizione (ACC) based on running processes. Checks are cached and fault-tolerant to prevent mis-detection and expensive per-frame system calls.
+```json
+{
+  "v": "0.2",
+  "ts": 1769902700.94,
+  "source": "acc",
+  "signals": {
+    "engine.rpm": 7200,
+    "vehicle.speed_kmh": 145.5,
+    "drivetrain.gear": 4,
+    "controls.throttle_pct": 100.0,
+    "controls.brake_pct": 0.0
+  }
+}
+
+```
 
 ---
 
-## Supported Simulators
+## ⚡ Quick Start (Windows)
 
-* Assetto Corsa (AC)
-* Assetto Corsa Competizione (ACC)
-* Automobilista 2 (AMS2)
+### Requirements
 
----
+* Python **3.12+**
+* A supported simulator (AC, ACC, or AMS2)
 
-## Usage
+### Steps
 
-### Auto-detect (Recommended)
-
-This mode automatically switches between AC, ACC, and AMS2 based on activity.
+1. **Install dependencies:**
 
 ```bash
+pip install -r requirements.txt
+
+```
+
+2. **Run the bridge (Auto-detect Recommended):**
+
+```bash
+# Automatically switches between AC, ACC, and AMS2
 py app.py --game auto
 
 ```
 
-### Force Specific Simulator
-
-You can force the bridge to listen to a specific simulator:
+3. **Force a specific simulator:**
 
 ```bash
 py app.py --game ac
@@ -77,25 +163,39 @@ py app.py --game ams2
 
 ---
 
-## Runtime Model
+## 🔄 Runtime Model
 
-SSP-BRIDGE runs as a persistent state machine:
+SSP-BRIDGE runs as a persistent state machine to ensure dashboard stability:
 
 > **waiting** → **active** → **lost** → **waiting**
 
-Dashboards and clients remain connected even when simulators restart or switch games.
-
-### Telemetry Output
-
-* **Schema:** `ssp/0.2` (Stable across simulators; unsupported signals are omitted).
-* **Formats:**
-* **NDJSON:** File / Stdout logging.
-* **WebSocket:** Real-time, sticky state for dashboards.
-
-
+* **Waiting:** No simulator detected.
+* **Active:** Telemetry is flowing smoothly.
+* **Lost:** Simulator disconnected or stalled (events are deduplicated).
 
 ---
 
-## License
+## 🛠️ Development Philosophy
 
-MIT
+* Minimal dependencies
+* Explicit, readable code
+* No hidden magic
+* Built to scale from software → hardware
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome — especially:
+
+* New simulator plugins (iRacing, rFactor 2)
+* Dashboard integrations
+* Documentation improvements
+
+---
+
+## 📄 License
+
+MIT License
+
+© Rushio Industries
