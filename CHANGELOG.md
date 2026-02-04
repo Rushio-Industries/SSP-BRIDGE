@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.3
+
+### Added
+- Official SSP protocol specification (`PROTOCOL.md`).
+- Frozen Core Signals set for `ssp/0.2`.
+- Extended capabilities metadata (min/max/precision where applicable).
+- Minimal protocol shape tests to prevent regressions.
+
+### Improved
+- Documentation alignment between README and implementation.
+- Clear separation between protocol, bridge, and client responsibilities.
+
+### Notes
+- No breaking changes to telemetry schema (`ssp/0.2`).
+- Fully compatible with v0.3.2 dashboards and clients.
+
 ## v0.3.2
 
 ### Added
