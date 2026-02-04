@@ -6,6 +6,7 @@ from typing import Dict, List, Type
 from ssp_bridge.plugins.base import TelemetryPlugin
 from ssp_bridge.plugins.ac.plugin import ACPlugin
 from ssp_bridge.plugins.acc.plugin import ACCPlugin
+from ssp_bridge.plugins.ams2.plugin import AMS2Plugin
 
 # IMPORTANT:
 # - AC shared memory mapping can be created even when the game is not running
@@ -14,6 +15,7 @@ from ssp_bridge.plugins.acc.plugin import ACCPlugin
 # To make `--game auto` behave correctly, we try ACC first, then AC.
 PLUGIN_ORDER: List[Type[TelemetryPlugin]] = [
     ACCPlugin,
+    AMS2Plugin,
     ACPlugin,
 ]
 

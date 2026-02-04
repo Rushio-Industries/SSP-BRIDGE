@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -13,7 +14,7 @@ from ssp_bridge.outputs.ws import WSBroadcaster
 
 def parse_args():
     p = argparse.ArgumentParser(prog="ssp-bridge", description="SimRacing Standard Protocol Bridge")
-    p.add_argument("--game", default="ac", help="plugin id (ac, acc, auto)")
+    p.add_argument("--game", default="ac", help="plugin id (ac, acc, ams2, auto)")
     p.add_argument("--hz", type=float, default=60.0, help="loop frequency (default: 60)")
 
     # outputs
@@ -45,12 +46,12 @@ def make_session_filename(args) -> str:
     if args.session.strip().lower() == "auto":
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         return f"session-{ts}.ndjson"
-    
+
     name = args.session.strip()
     if not name:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         name = f"session-{ts}"
-    
+
     if not name.endswith(".ndjson"):
         name += ".ndjson"
     return name
@@ -120,9 +121,19 @@ async def main():
     print(f"WebSocket: ws://{args.ws_host}:{args.ws_port}" if args.ws == "on" else "WebSocket: off")
 
     # --- Main Loop ---
-    period = 1.0 / max(args.hz, 1.0)
+    # Best practice for UDP-based sims (AMS2): read as fast as needed (to avoid backlog latency),
+    # but emit at a fixed rate (e.g., 60 Hz) to WS/NDJSON.
+    emit_period = 1.0 / max(args.hz, 1.0)
+
+    # Input polling: independent from emit hz. Keeps latency low without burning CPU.
+    poll_sleep = min(0.005, emit_period / 4.0)  # ~200 Hz max, or quarter of emit rate
+
+    latest_frame = None
+    next_emit = time.time()
+
     try:
         while True:
+            # --- Read (non-blocking where possible) ---
             try:
                 frame = plugin.read_frame()
             except Exception as e:
@@ -145,21 +156,27 @@ async def main():
                             await asyncio.sleep(max(args.wait_interval, 0.2))
 
                     print(f"{plugin.name} detected, resuming telemetry.")
+                    latest_frame = None
+                    next_emit = time.time()
                     continue
                 else:
                     raise
 
-            if frame is None:
-                await asyncio.sleep(period)
-                continue
+            if frame is not None:
+                latest_frame = frame
 
-            if nd:
-                nd.write(frame)
+            # --- Emit at fixed rate (default 60 Hz) ---
+            now = time.time()
+            if latest_frame is not None and now >= next_emit:
+                if nd:
+                    nd.write(latest_frame)
+                if ws:
+                    await ws.broadcast(latest_frame)
 
-            if ws:
-                await ws.broadcast(frame)
+                # avoid "catch-up storms" if the loop was blocked
+                next_emit = now + emit_period
 
-            await asyncio.sleep(period)
+            await asyncio.sleep(poll_sleep)
 
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
@@ -174,7 +191,7 @@ async def main():
 
         if plugin:
             plugin.close()
-            
+
         print("\nBridge closed.")
 
 
