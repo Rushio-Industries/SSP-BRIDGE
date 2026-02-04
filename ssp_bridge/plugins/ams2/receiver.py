@@ -1,3 +1,6 @@
+"""UDP receiver for SMS/AMS2 telemetry.
+
+Keeps the latest valid packet so callers can poll without blocking."""
 # ssp_bridge/plugins/ams2/receiver.py
 from __future__ import annotations
 
@@ -50,8 +53,8 @@ def _u8_to_pct(x: int) -> float:
 
 def _decode_gear(gear_num_gears: int) -> tuple[int, int]:
     """
-    sGearNumGears é um uint8 que normalmente vem "compactado".
-    Implementação comum (SMS/PCARS): low nibble = gear, high nibble = num gears.
+    sGearNumGears is a uint8 that is typically bit-packed.
+    Common (SMS/PCARS) encoding: low nibble = gear, high nibble = num gears.
     - gear 0 => N
     - gear 15 => R (sentinela comum)
     """
@@ -81,7 +84,7 @@ class AMS2Telemetry:
 
 class LatestUDPReceiver:
     """
-    Receiver simples: guarda sempre o último pacote válido de eCarPhysics.
+    Simple receiver: always keeps the latest valid eCarPhysics packet.
     """
 
     def __init__(self, host: str = "0.0.0.0", port: int = 5606) -> None:
@@ -150,10 +153,10 @@ class LatestUDPReceiver:
             if mPacketType != _PACKET_TYPE_CAR_PHYSICS:
                 continue
 
-            # Precisa ter tamanho mínimo pra pegar os campos que a gente usa
-            # (o header Patch5 diz 559 bytes pro sTelemetryData)
+            # Require a minimum size to read the fields we use.
+            # (Patch5 header states 559 bytes for sTelemetryData).
             if len(data) < _TELEMETRY_PACKET_SIZE:
-                # alguns setups podem mandar maior/menor; mas se não chega nos offsets, ignora
+                # Some setups may send larger/smaller packets; if offsets are missing, ignore.
                 if len(data) < (_OFF_GEAR_NUM_GEARS + 1):
                     continue
 

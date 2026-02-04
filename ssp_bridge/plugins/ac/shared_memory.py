@@ -1,3 +1,6 @@
+"""Assetto Corsa shared memory reader.
+
+Thin ctypes wrapper over the AC shared memory layout."""
 import mmap
 import ctypes
 
@@ -19,7 +22,7 @@ class SPageFilePhysics(ctypes.Structure):
 class ACPhysicsView:
     def __init__(self):
         self._size = ctypes.sizeof(SPageFilePhysics)
-        # precisa ser WRITE pra ctypes.from_buffer
+        # Must be writable for ctypes.from_buffer().
         self._mm = mmap.mmap(-1, self._size, tagname="acpmf_physics", access=mmap.ACCESS_WRITE)
         self.data = SPageFilePhysics.from_buffer(self._mm)
 

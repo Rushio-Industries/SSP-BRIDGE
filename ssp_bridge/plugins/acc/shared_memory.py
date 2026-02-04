@@ -1,3 +1,6 @@
+"""ACC shared memory reader.
+
+Wraps the ACC shared memory structures (Windows)."""
 import ctypes
 from ctypes import wintypes
 import struct
@@ -133,7 +136,7 @@ class ACCSharedMemory:
 
         now = time.time()
 
-        # stale detection (packet should move)
+        # Stale detection hint (packetId should normally advance during active sessions).
         if self._last_pkt is None:
             self._last_pkt = pkt
             self._last_pkt_change_ts = now

@@ -1,3 +1,6 @@
+"""AMS2 telemetry plugin (UDP/SMS).
+
+Receives SMS UDP packets and normalizes them into the SSP frame model."""
 # ssp_bridge/plugins/ams2/plugin.py
 from __future__ import annotations
 
@@ -30,8 +33,8 @@ class AMS2Plugin(TelemetryPlugin):
         self._receiver = LatestUDPReceiver(host="0.0.0.0", port=self._udp_port)
         self._receiver.start()
 
-        # IMPORTANTE:
-        # Só consideramos "aberto" se chegar pelo menos 1 pacote.
+        # IMPORTANT:
+        # Only consider the plugin "open" after at least one packet arrives.
         # Isso faz o --game auto funcionar e o --wait funcionar bem.
         deadline = time.time() + 0.6  # ~600ms
         while time.time() < deadline:
@@ -39,7 +42,7 @@ class AMS2Plugin(TelemetryPlugin):
                 return
             time.sleep(0.02)
 
-        # Não chegou nada: fecha e sinaliza "simulador não disponível ainda"
+        # No packets: close and report "simulator not available yet".
         self.close()
         raise RuntimeError(
             f"AMS2 UDP not detected yet (no packets on port {self._udp_port}). "
@@ -52,6 +55,16 @@ class AMS2Plugin(TelemetryPlugin):
 
         tel = self._receiver.get_latest()
         if tel is None:
+            return None
+
+        now = time.time()
+        age = now - float(tel.ts)
+
+        # No fresh packets recently -> treat as "no data"
+        if age > 0.50:
+            # No packets for too long -> force reopen
+            if age > 2.0:
+                raise RuntimeError("AMS2 telemetry stale (no UDP packets). Reopen needed.")
             return None
 
         speed_kmh = abs(tel.speed_ms) * 3.6

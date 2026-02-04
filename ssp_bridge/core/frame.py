@@ -1,3 +1,6 @@
+"""Frame conversion helpers.
+
+Converts simulator-specific data into the normalized SSP frame model."""
 # ssp_bridge/core/frame.py
 from __future__ import annotations
 
@@ -7,12 +10,12 @@ from typing import Any, Dict, Optional
 
 
 def _now_ts() -> float:
-    """Unix timestamp em segundos (float)."""
+    """Unix timestamp in seconds (float)."""
     return time.time()
 
 
 def _clamp_pct(x: float) -> float:
-    """Garante 0..100 (ajuda a evitar valores malucos se algo estiver desalinhado)."""
+    """Clamp to 0..100 (helps avoid nonsense values if something is misaligned)."""
     if x < 0.0:
         return 0.0
     if x > 100.0:
@@ -55,17 +58,17 @@ def to_ssp_frame_ac(
     car_class: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Converte leitura do AC (SPageFilePhysics) para o SSP Frame v0.2.
+    Convert an AC physics view (SPageFilePhysics) to an SSP v0.2 frame.
 
-    Espera que `phys` tenha ao menos:
+    `phys` is expected to provide at least:
       - rpms (int)
       - gear (int)
       - gas (float 0..1)
       - brake (float 0..1)
-      - speedKmh (float) (opcional se velocity existir)
+      - speedKmh (float) (optional if velocity is available)
       - velocity[3] (float*3) (fallback)
 
-    Retorna um dict JSON-serializável.
+    Returns a JSON-serializable dict.
     """
     rpm = int(getattr(phys, "rpms", 0))
     gear = int(getattr(phys, "gear", 0))

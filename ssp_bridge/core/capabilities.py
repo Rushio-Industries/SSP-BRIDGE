@@ -1,3 +1,6 @@
+"""Capability maps and utilities.
+
+Capabilities are emitted on connect/simulator switch so clients can adapt dynamically."""
 from __future__ import annotations
 
 # Centralized capabilities definitions (used by plugins and for exporting JSON files).
@@ -22,7 +25,6 @@ CAPABILITIES_ACC = {
     "engine.rpm": {"type": "integer", "unit": "rpm", "hz": 60},
     "vehicle.speed_kmh": {"type": "number", "unit": "km/h", "hz": 60},
     "drivetrain.gear": {"type": "integer", "unit": "gear", "hz": 60},
-    # Requested: include throttle/brake, and *no clutch*.
     "controls.throttle_pct": {"type": "number", "unit": "%", "hz": 60},
     "controls.brake_pct": {"type": "number", "unit": "%", "hz": 60},
   }

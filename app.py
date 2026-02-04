@@ -11,47 +11,53 @@ from ssp_bridge.plugins.registry import create_plugin, auto_detect_plugin
 from ssp_bridge.outputs.ndjson import NdjsonWriter
 from ssp_bridge.outputs.ws import WSBroadcaster
 
+# Deduplication state (avoid repeating identical status events).
+_last_status_key = None  # (state, source)
+
+
+def make_status_event(state: str, source: str | None) -> dict:
+    return {
+        "type": "status",
+        "ts": time.time(),
+        "state": state,    # waiting | active | lost
+        "source": source,  # ac | acc | ams2 | None
+    }
+
+
+def make_capabilities_event(source: str, caps: dict) -> dict:
+    return {
+        "type": "capabilities",
+        "ts": time.time(),
+        "source": source,
+        "schema": "ssp/0.2",
+        "capabilities": caps,
+    }
+
 
 def parse_args():
     p = argparse.ArgumentParser(prog="ssp-bridge", description="SimRacing Standard Protocol Bridge")
     p.add_argument("--game", default="ac", help="plugin id (ac, acc, ams2, auto)")
     p.add_argument("--hz", type=float, default=60.0, help="loop frequency (default: 60)")
-
-    # outputs
     p.add_argument("--out", default="logs", help="output directory (default: logs)")
     p.add_argument("--ndjson", choices=["on", "off"], default="on", help="enable NDJSON logging")
     p.add_argument("--ws", choices=["on", "off"], default="on", help="enable WebSocket streaming")
-
-    # capabilities
-    p.add_argument("--capabilities", default="auto",
-                   help="capabilities output: auto | off | <path>")
-
-    # session naming for ndjson
-    p.add_argument("--session", default="auto",
-                   help="ndjson session name: auto | <name>")
-
-    # waiting behavior
+    p.add_argument("--capabilities", default="auto", help="capabilities output: auto | off | <path>")
+    p.add_argument("--session", default="auto", help="ndjson session name: auto | <name>")
     p.add_argument("--wait", choices=["on", "off"], default="on", help="wait for simulator to be available")
     p.add_argument("--wait-interval", type=float, default=2.0, help="seconds between retry attempts")
-
-    # websocket config
     p.add_argument("--ws-host", default="127.0.0.1")
     p.add_argument("--ws-port", type=int, default=8765)
     return p.parse_args()
 
 
-# --- Helpers ---
-
 def make_session_filename(args) -> str:
     if args.session.strip().lower() == "auto":
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         return f"session-{ts}.ndjson"
-
     name = args.session.strip()
     if not name:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         name = f"session-{ts}"
-
     if not name.endswith(".ndjson"):
         name += ".ndjson"
     return name
@@ -71,14 +77,50 @@ async def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Plugin Initialization (with optional waiting) ---
+    # --- Output Handlers Setup ---
+    nd = None
+    nd_path = None
+    if args.ndjson == "on":
+        nd_path = out_dir / make_session_filename(args)
+        nd = NdjsonWriter(str(nd_path))
+
+    ws = None
+    server = None
+    if args.ws == "on":
+        ws = WSBroadcaster()
+        server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
+
+    # --- Communication Helpers ---
+    async def emit(event: dict):
+        # System events can be sticky on WS (status/capabilities).
+        if nd:
+            nd.write(event)
+        if ws:
+            ws.update_sticky(event)
+            await ws.broadcast(event)
+
+    async def emit_status(state: str, source: str | None):
+        global _last_status_key
+        key = (state, source)
+        if key == _last_status_key:
+            return
+        _last_status_key = key
+        await emit(make_status_event(state, source))
+
+    async def emit_capabilities(source: str, plugin):
+        await emit(make_capabilities_event(source, plugin.capabilities()))
+
+    # --- Plugin Initialization ---
     game = args.game.strip().lower()
     plugin = None
+
+    # Emit "waiting" before entering the detection loop.
+    await emit_status("waiting", None)
 
     while plugin is None:
         try:
             if game == "auto":
-                plugin = auto_detect_plugin()  # Já vem aberto pelo registry
+                plugin = auto_detect_plugin()
             else:
                 plugin = create_plugin(game)
                 plugin.open()
@@ -88,9 +130,12 @@ async def main():
             print(f"Waiting for simulator ({args.game})... ({e})")
             await asyncio.sleep(max(args.wait_interval, 0.2))
 
+    # Emit "active" + capabilities on first detection.
     print(f"{plugin.name} detected, starting telemetry.")
+    await emit_status("active", plugin.id)
+    await emit_capabilities(plugin.id, plugin)
 
-    # --- Capabilities Export ---
+    # --- Capabilities Export (File) ---
     cap_path = resolve_capabilities_path(args, out_dir, plugin.id)
     if cap_path is not None:
         cap_path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,64 +144,61 @@ async def main():
             encoding="utf-8"
         )
 
-    # --- Output Handlers Setup ---
-    nd = None
-    nd_path = None
-    if args.ndjson == "on":
-        nd_path = out_dir / make_session_filename(args)
-        nd = NdjsonWriter(str(nd_path))
-
-    # --- WebSocket Server Setup ---
-    ws = None
-    server = None
-    if args.ws == "on":
-        ws = WSBroadcaster()
-        server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
-
-    # --- Status Feedback ---
-    print("SSP-BRIDGE v0.3.1")
+    print("SSP-BRIDGE v0.3.2")
     print(f"Plugin: {plugin.id} - {plugin.name}")
     print(f"Capabilities: {cap_path if cap_path else 'off'}")
     print(f"NDJSON: {nd_path if nd else 'off'}")
     print(f"WebSocket: ws://{args.ws_host}:{args.ws_port}" if args.ws == "on" else "WebSocket: off")
 
     # --- Main Loop ---
-    # Best practice for UDP-based sims (AMS2): read as fast as needed (to avoid backlog latency),
-    # but emit at a fixed rate (e.g., 60 Hz) to WS/NDJSON.
     emit_period = 1.0 / max(args.hz, 1.0)
+    poll_sleep = min(0.005, emit_period / 4.0)
 
-    # Input polling: independent from emit hz. Keeps latency low without burning CPU.
-    poll_sleep = min(0.005, emit_period / 4.0)  # ~200 Hz max, or quarter of emit rate
+    latest_frame: dict | None = None
 
-    latest_frame = None
+    # Controls fixed-rate output.
     next_emit = time.time()
+
+    # NEW: prevents re-emitting cached frames that did not update.
+    last_seen_frame_ts = None       # ts of the latest observed frame
+    last_emitted_frame_ts = None    # ts of the last emitted frame
 
     try:
         while True:
-            # --- Read (non-blocking where possible) ---
             try:
                 frame = plugin.read_frame()
             except Exception as e:
                 if args.wait == "on":
                     print(f"Telemetry lost ({e}). Waiting for simulator...")
+                    await emit_status("lost", plugin.id if plugin else None)
+                    await emit_status("waiting", None)
+
                     try:
-                        plugin.close()
+                        if plugin:
+                            plugin.close()
                     except Exception:
                         pass
                     plugin = None
 
-                    while plugin is None:
+                    # Dynamic re-detection loop.
+                    while True:
                         try:
                             if game == "auto":
                                 plugin = auto_detect_plugin()
                             else:
                                 plugin = create_plugin(game)
                                 plugin.open()
-                        except Exception:
-                            await asyncio.sleep(max(args.wait_interval, 0.2))
 
-                    print(f"{plugin.name} detected, resuming telemetry.")
+                            print(f"{plugin.name} detected, resuming telemetry.")
+                            await emit_status("active", plugin.id)
+                            await emit_capabilities(plugin.id, plugin)
+                            break
+                        except Exception:
+                            await asyncio.sleep(max(args.wait_interval, 0.5))
+
                     latest_frame = None
+                    last_seen_frame_ts = None
+                    last_emitted_frame_ts = None
                     next_emit = time.time()
                     continue
                 else:
@@ -165,15 +207,23 @@ async def main():
             if frame is not None:
                 latest_frame = frame
 
-            # --- Emit at fixed rate (default 60 Hz) ---
+                # Track newest observed frame timestamp (used for dedup).
+                ts = frame.get("ts")
+                if ts is not None:
+                    last_seen_frame_ts = ts
+
+            # --- Emit at fixed rate (ONLY when a NEW frame exists) ---
             now = time.time()
             if latest_frame is not None and now >= next_emit:
-                if nd:
-                    nd.write(latest_frame)
-                if ws:
-                    await ws.broadcast(latest_frame)
+                # Only emit if we observed a newer frame since the last emit.
+                # This stops NDJSON/WS from being filled with identical frames.
+                if last_seen_frame_ts is not None and last_seen_frame_ts != last_emitted_frame_ts:
+                    if nd:
+                        nd.write(latest_frame)
+                    if ws:
+                        await ws.broadcast(latest_frame)
+                    last_emitted_frame_ts = last_seen_frame_ts
 
-                # avoid "catch-up storms" if the loop was blocked
                 next_emit = now + emit_period
 
             await asyncio.sleep(poll_sleep)
@@ -181,22 +231,17 @@ async def main():
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
-        # --- Cleanup ---
         if server:
             server.close()
             await server.wait_closed()
-
         if nd:
             nd.close()
-
-        if plugin:
-            plugin.close()
-
-        print("\nBridge closed.")
+        try:
+            if plugin:
+                plugin.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(main())

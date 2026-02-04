@@ -1,3 +1,6 @@
+"""NDJSON output writer.
+
+Writes one JSON object per line for easy logging and replay."""
 import json
 
 class NdjsonWriter:
