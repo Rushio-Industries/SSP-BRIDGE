@@ -37,7 +37,7 @@ Each telemetry frame is a single JSON object.
 |--------|--------|-------------|
 | `v`     | string | SSP schema version |
 | `ts`    | number | UNIX timestamp in seconds (float) |
-| `source`| string | Plugin/simulator id (e.g. `ac`, `acc`) |
+| `source`| string | Plugin/simulator id (e.g. `ac`, `acc`, `ams2`) |
 | `signals` | object | Flat key-value map of telemetry signals |
 
 ---

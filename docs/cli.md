@@ -19,7 +19,8 @@ Selects the simulator plugin.
 
 - `ac` — Assetto Corsa
 - `acc` — Assetto Corsa Competizione
-- `auto` — auto-detect (tries `acc` first, then `ac`)
+- `ams2` — Automobilista 2 (UDP/SMS, default port 5606)
+- `auto` — auto-detect (tries `acc` first, then `ac`; AMS2 requires real UDP packets)
 
 Default: `ac`
 
@@ -28,6 +29,7 @@ Examples:
 ```bash
 python app.py --game ac
 python app.py --game acc
+python app.py --game ams2
 python app.py --game auto
 ```
 

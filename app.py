@@ -114,7 +114,7 @@ async def main():
         server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
 
     # --- Status Feedback ---
-    print("SSP-BRIDGE v0.3.0")
+    print("SSP-BRIDGE v0.3.1")
     print(f"Plugin: {plugin.id} - {plugin.name}")
     print(f"Capabilities: {cap_path if cap_path else 'off'}")
     print(f"NDJSON: {nd_path if nd else 'off'}")

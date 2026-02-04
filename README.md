@@ -9,14 +9,14 @@ so dashboards/tools can be built once and work across simulators.
 
 ## 🚦 Project Status
 
-**v0.3.0 – Stable core + AC/ACC support**
+**v0.3.1 – Stable core + AC/ACC/AMS2 support**
 
 ✅ Plugin-first architecture  
-✅ CLI (`--game ac|acc|auto`)  
+✅ CLI (`--game ac|acc|ams2|auto`)  
 ✅ NDJSON session logging  
 ✅ WebSocket real-time streaming  
 ✅ Capabilities export for feature discovery  
-✅ Unified SSP frame + capabilities format across plugins  
+✅ Unified SSP frame + capabilities format across plugins   
 
 ---
 
@@ -39,8 +39,13 @@ Shared Memory source (`acpmf_physics`).
 ### Assetto Corsa Competizione (`acc`)
 WinAPI shared memory mapping (`Local\acpmf_physics`).
 
-> **Note about `--game auto`:** ACC is tried first to avoid false positives,
-because AC's mapping can be created even when the game isn't running.
+### Automobilista 2 (`ams2`)
+UDP telemetry (SMS / Project CARS protocol).  
+Default UDP port: **5606** (configure AMS2 to match).
+
+> **Note about `--game auto`:** ACC is tried first to avoid false positives.
+AC's mapping can exist even when the game isn't running.
+AMS2 is only considered “available” after receiving real UDP packets.
 
 ---
 
@@ -112,10 +117,10 @@ pip install -r requirements.txt
 # Pick explicitly
 python app.py --game ac
 python app.py --game acc
+python app.py --game ams2
 
 # Or auto-detect
 python app.py --game auto
-```
 
 ---
 

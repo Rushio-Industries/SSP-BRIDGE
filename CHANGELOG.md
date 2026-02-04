@@ -1,16 +1,13 @@
 # Changelog
 
-## v0.3.0
+## v0.3.1
 
 ### Added
-- ACC plugin (`--game acc`) with standardized SSP v0.2 output.
-- Standardized **capabilities format** across plugins (`ssp/0.2`).
-- Included `controls.throttle_pct` and `controls.brake_pct` in ACC capabilities (no clutch).
+- Automobilista 2 plugin (`--game ams2`) via UDP (SMS / Project CARS protocol).
+- AMS2 capabilities export (`capabilities.ams2.json`) following the same `ssp/0.2` format.
 
 ### Fixed
-- `--game auto` now prefers **ACC first** to avoid AC false-positives.
-- AC frames now report `v: "0.2"` (was inconsistent).
+- AMS2 plugin waits for real UDP packets before declaring the sim “available” (avoids false positives in `--game auto` flows).
 
 ### Docs
-- Refreshed README + CLI docs.
-- Added SSP schema documentation (`docs/schema.md`).
+- Updated README and CLI docs to include AMS2 and setup notes.
