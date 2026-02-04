@@ -1,9 +1,3 @@
-Com certeza! Mantive exatamente a **estrutura visual e a filosofia** do seu layout antigo ("SimRacing Standard Protocol Bridge"), mas atualizei todo o conteúdo técnico para refletir a **versão v0.3.2** (suporte a AMS2, ACC, sistema de *handshake*, detecção de processos no Windows, etc.).
-
-Aqui está o resultado unificado:
-
----
-
 # SSP-BRIDGE
 
 **SimRacing Standard Protocol Bridge**
