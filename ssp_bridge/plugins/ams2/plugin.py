@@ -69,17 +69,25 @@ class AMS2Plugin(TelemetryPlugin):
 
         speed_kmh = abs(tel.speed_ms) * 3.6
 
+        signals = {
+            "engine.rpm": int(tel.rpm),
+            "vehicle.speed_kmh": float(speed_kmh),
+            "drivetrain.gear": int(tel.gear),
+            "controls.throttle_pct": _clamp_pct(float(tel.throttle_pct)),
+            "controls.brake_pct": _clamp_pct(float(tel.brake_pct)),
+        }
+
+        rpm_max = int(getattr(tel, "max_rpm", 0) or 0)
+        if 1000 <= rpm_max <= 25000:
+            signals["engine.rpm_max"] = rpm_max
+            pct = (float(tel.rpm) / float(rpm_max)) * 100.0 if rpm_max else 0.0
+            signals["engine.rpm_pct"] = round(max(0.0, min(100.0, pct)), 1)
+
         return {
             "v": "0.2",
             "ts": tel.ts,
             "source": "ams2",
-            "signals": {
-                "engine.rpm": int(tel.rpm),
-                "vehicle.speed_kmh": float(speed_kmh),
-                "drivetrain.gear": int(tel.gear),
-                "controls.throttle_pct": _clamp_pct(float(tel.throttle_pct)),
-                "controls.brake_pct": _clamp_pct(float(tel.brake_pct)),
-            },
+            "signals": signals,
         }
 
     def capabilities(self) -> Dict[str, Any]:

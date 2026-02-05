@@ -36,6 +36,7 @@ _OFF_THROTTLE = 30       # uint8
 _OFF_SPEED = 36          # float
 _OFF_RPM = 40            # uint16
 _OFF_GEAR_NUM_GEARS = 45 # uint8
+_OFF_MAX_RPM = 42        # uint16 # uint8
 
 
 def _now_ts() -> float:
@@ -75,6 +76,7 @@ def _decode_gear(gear_num_gears: int) -> tuple[int, int]:
 class AMS2Telemetry:
     ts: float
     rpm: int
+    max_rpm: int
     speed_ms: float
     throttle_pct: float
     brake_pct: float
@@ -166,20 +168,22 @@ class LatestUDPReceiver:
                 speed_ms = struct.unpack_from("<f", data, _OFF_SPEED)[0]
                 rpm = struct.unpack_from("<H", data, _OFF_RPM)[0]
                 gear_num_gears = struct.unpack_from("<B", data, _OFF_GEAR_NUM_GEARS)[0]
+                max_rpm = struct.unpack_from("<H", data, _OFF_MAX_RPM)[0]
             except struct.error:
                 continue
 
             gear, num_gears = _decode_gear(gear_num_gears)
 
             tel = AMS2Telemetry(
-                ts=_now_ts(),
-                rpm=int(rpm),
-                speed_ms=float(speed_ms),
-                throttle_pct=_u8_to_pct(int(throttle_u8)),
-                brake_pct=_u8_to_pct(int(brake_u8)),
-                gear=int(gear),
-                num_gears=int(num_gears),
-            )
+            ts=_now_ts(),
+            rpm=int(rpm),
+            max_rpm=int(max_rpm),
+            speed_ms=float(speed_ms),
+            throttle_pct=_u8_to_pct(int(throttle_u8)),
+            brake_pct=_u8_to_pct(int(brake_u8)),
+            gear=int(gear),
+            num_gears=int(num_gears),
+        )
 
             with self._lock:
                 self._latest = tel

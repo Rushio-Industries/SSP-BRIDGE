@@ -1,61 +1,3 @@
-Perfeito. Agora sim dá pra **fechar a v0.3.3 com critério**.
-Vou fazer exatamente o que você pediu: **cobrir os gaps**, sem mudar o rumo do projeto, usando **o README e o CHANGELOG que você enviou** como base .
-
-Vou dividir em 3 partes objetivas:
-
-1. **Veredito técnico do estado atual**
-2. **O que entra oficialmente na v0.3.3**
-3. **Arquivos prontos pra você copiar e colar**
-
-   * `PROTOCOL.md`
-   * ajuste mínimo no `README.md`
-   * `CHANGELOG.md` v0.3.3
-
----
-
-## 1️⃣ Veredito técnico (frio e honesto)
-
-**Estado atual (v0.3.2):**
-
-* Arquitetura: **correta**
-* Ideia central: **clara**
-* Implementação: **coerente**
-* Risco de desvio: **baixo**
-* Risco real: **protocolo implícito (não documentado)**
-
-👉 Ou seja: **o código já é melhor que a documentação**.
-A v0.3.3 existe exatamente pra alinhar isso.
-
----
-
-## 2️⃣ O que a v0.3.3 PRECISA fazer (e só isso)
-
-### ✅ Entram na v0.3.3
-
-* Protocolo **documentado e congelado** (`ssp/0.2`)
-* Core signals oficialmente definidos
-* Capabilities enriquecidas (sem breaking change)
-* Testes mínimos de forma (shape / schema)
-* README alinhado com o papel real do projeto
-
-### ❌ Não entram
-
-* Dashboard
-* .exe
-* Portas (UDP / Serial)
-* UI / config
-
-Esses ficam **100% limpos pra v0.4.0**.
-
----
-
-## 3️⃣ Arquivos finais da v0.3.3
-
----
-
-# 📄 `PROTOCOL.md` (NOVO – copie e cole)
-
-````md
 # SSP – SimRacing Standard Protocol
 Version: ssp/0.2
 
@@ -148,16 +90,17 @@ Signals not listed here must not be assumed by clients.
 }
 ```
 
-| Field   | Type   | Description                |
-| ------- | ------ | -------------------------- |
-| v       | string | Protocol version (`"0.2"`) |
-| ts      | number | Unix timestamp             |
-| source  | string | Simulator ID               |
-| signals | object | Key-value map of telemetry |
+| Field   | Type   | Description                    |
+| ------- | ------ | ------------------------------ |
+| v       | string | Frame format version (`"0.2"`) |
+| ts      | number | Unix timestamp                 |
+| source  | string | Simulator ID                   |
+| signals | object | Key-value map of telemetry     |
 
 **Rules:**
 
 * Missing signals mean “not available”, not zero.
+* Signals MUST be omitted when unavailable (no null or empty values).
 * Clients must rely on capabilities for discovery.
 * Backward compatibility is preserved within the same `v`.
 
@@ -182,43 +125,42 @@ Optional:
 
 ---
 
-## 4. Versioning Rules
+## 4. RPM-Derived Signals
 
-* `schema` identifies the SSP generation (`ssp/0.2`)
-* `v` identifies frame compatibility
-* Minor additions do not break clients
-* Renaming or unit changes require a new major version
+These signals are derived from core telemetry and vehicle metadata.
+
+| Signal         | Type    | Unit    |
+| -------------- | ------- | ------- |
+| engine.rpm_max | integer | rpm     |
+| engine.rpm_pct | number  | 0.0–1.0 |
+
+**Rules:**
+
+* `engine.rpm_max` represents the maximum engine RPM for the current vehicle.
+* `engine.rpm_pct` represents the normalized RPM value (`engine.rpm / engine.rpm_max`).
+* `engine.rpm_pct` MUST only be emitted when `engine.rpm_max` is known and valid.
+* If `engine.rpm_max` is unavailable, both signals MUST be omitted.
 
 ---
 
-## 5. Design Goals
+## 5. Versioning Rules
+
+* `schema` identifies the SSP generation (`ssp/0.2`).
+* `v` identifies the frame format version (`"0.2"`).
+* Minor additions do not break clients.
+* Renaming signals or changing units requires a new major version.
+
+---
+
+## 6. Design Goals
 
 * Simulator-agnostic
 * Hardware-friendly
 * No hidden assumptions
 * Easy to implement on microcontrollers
+* Stable and predictable behavior
 
 ---
 
 SSP is a **contract**, not an implementation detail.
 
-````
-
----
-
-# ✏️ Ajuste mínimo no `README.md`
-
-Adicionar **uma única seção**, sem mudar o resto:
-
-```md
-## 📜 Protocol Specification
-
-SSP-BRIDGE implements the **SimRacing Standard Protocol (SSP)**.
-
-The protocol is fully documented and versioned in:
-
-- [`PROTOCOL.md`](./PROTOCOL.md)
-
-Dashboards, tools, and hardware integrations should rely on the protocol
-definition rather than simulator-specific behavior.
-````

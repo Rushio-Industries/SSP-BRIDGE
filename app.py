@@ -10,6 +10,9 @@ import websockets
 from ssp_bridge.plugins.registry import create_plugin, auto_detect_plugin
 from ssp_bridge.outputs.ndjson import NdjsonWriter
 from ssp_bridge.outputs.ws import WSBroadcaster
+from ssp_bridge.outputs.serial_out import SerialOut
+from ssp_bridge.core.derived import RpmMaxTracker, add_engine_rpm_pct
+
 
 # Deduplication state (avoid repeating identical status events).
 _last_status_key = None  # (state, source)
@@ -47,6 +50,7 @@ def parse_args():
     p.add_argument("--wait-interval", type=float, default=2.0, help="seconds between retry attempts")
     p.add_argument("--ws-host", default="127.0.0.1")
     p.add_argument("--ws-port", type=int, default=8765)
+    p.add_argument("--serial-out", default=None, help="Send NDJSON lines via Serial COM:BAUD (example: COM3:115200)",)
     return p.parse_args()
 
 
@@ -76,6 +80,8 @@ async def main():
     args = parse_args()
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+    rpm_tracker = RpmMaxTracker(publish_min_rpm=3000)
+
 
     # --- Output Handlers Setup ---
     nd = None
@@ -90,14 +96,33 @@ async def main():
         ws = WSBroadcaster()
         server = await websockets.serve(ws.handler, args.ws_host, args.ws_port)
 
+    serial_out = None
+    if args.serial_out:
+        port, baud_s = args.serial_out.split(":")
+        serial_out = SerialOut(port.strip(), int(baud_s))
+
+        
+
     # --- Communication Helpers ---
-    async def emit(event: dict):
-        # System events can be sticky on WS (status/capabilities).
-        if nd:
-            nd.write(event)
+    def emit(obj: dict):
+        line = json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
+        # stdout
+        print(line)
+        # websocket
         if ws:
-            ws.update_sticky(event)
-            await ws.broadcast(event)
+            ws.update_sticky(obj)
+        # ndjson file
+        if nd:
+            nd.write(obj)
+        # serial out
+        if serial_out:
+            serial_out.send_line(line)
+
+    async def emit_async(obj: dict):
+        """Async wrapper for emit that broadcasts to WebSocket."""
+        emit(obj)
+        if ws:
+            await ws.broadcast(obj)
 
     async def emit_status(state: str, source: str | None):
         global _last_status_key
@@ -105,10 +130,10 @@ async def main():
         if key == _last_status_key:
             return
         _last_status_key = key
-        await emit(make_status_event(state, source))
+        await emit_async(make_status_event(state, source))
 
     async def emit_capabilities(source: str, plugin):
-        await emit(make_capabilities_event(source, plugin.capabilities()))
+        await emit_async(make_capabilities_event(source, plugin.capabilities()))
 
     # --- Plugin Initialization ---
     game = args.game.strip().lower()
@@ -162,6 +187,7 @@ async def main():
     # NEW: prevents re-emitting cached frames that did not update.
     last_seen_frame_ts = None       # ts of the latest observed frame
     last_emitted_frame_ts = None    # ts of the last emitted frame
+    rpm_tracker.reset()
 
     try:
         while True:
@@ -218,10 +244,14 @@ async def main():
                 # Only emit if we observed a newer frame since the last emit.
                 # This stops NDJSON/WS from being filled with identical frames.
                 if last_seen_frame_ts is not None and last_seen_frame_ts != last_emitted_frame_ts:
-                    if nd:
-                        nd.write(latest_frame)
-                    if ws:
-                        await ws.broadcast(latest_frame)
+                    try:
+                        sig = latest_frame.get("signals", {})
+                        add_engine_rpm_pct(sig, rpm_tracker)
+                    except Exception:
+                        pass
+
+                    await emit_async(latest_frame)
+
                     last_emitted_frame_ts = last_seen_frame_ts
 
                 next_emit = now + emit_period
