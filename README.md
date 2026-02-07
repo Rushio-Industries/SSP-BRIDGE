@@ -193,4 +193,7 @@ py app.py --game beamng
 ## 📄 License
 
 MIT License
+
 © Rushio Industries
+
+Maintained by Muzonho — Founder of Rushio Industries
