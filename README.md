@@ -204,7 +204,7 @@ SSP-BRIDGE runs as a persistent state machine to ensure client stability:
 
 * ✅ v0.2: Plugin loader and CLI (`--game ac`, `--game auto`)
 * ✅ v0.3: Additional simulators (AMS2 / ACC)
-* v0.4: Hardware-oriented outputs (serial ✅ / CAN ⏳ / UDP ⏳)
+* v0.4: Hardware-oriented outputs (serial ✅ / UDP ⏳)
 * v1.0: Stable SSP specification and SDKs
 
 ---
