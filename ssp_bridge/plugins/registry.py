@@ -14,6 +14,7 @@ from ssp_bridge.plugins.base import TelemetryPlugin
 from ssp_bridge.plugins.ac.plugin import ACPlugin
 from ssp_bridge.plugins.acc.plugin import ACCPlugin
 from ssp_bridge.plugins.ams2.plugin import AMS2Plugin
+from ssp_bridge.plugins.beamng.plugin import BeamNGPlugin
 
 # Notes:
 # - AC shared memory mapping can be created even when the game is not running
@@ -24,6 +25,7 @@ PLUGIN_ORDER: List[Type[TelemetryPlugin]] = [
     
     ACCPlugin,
     AMS2Plugin,
+    BeamNGPlugin,
     ACPlugin,
 ]
 

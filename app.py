@@ -39,7 +39,7 @@ def make_capabilities_event(source: str, caps: dict) -> dict:
 
 def parse_args():
     p = argparse.ArgumentParser(prog="ssp-bridge", description="SimRacing Standard Protocol Bridge")
-    p.add_argument("--game", default="ac", help="plugin id (ac, acc, ams2, auto)")
+    p.add_argument("--game", default="ac", help="plugin id (ac, acc, ams2, beamng, auto)")
     p.add_argument("--hz", type=float, default=60.0, help="loop frequency (default: 60)")
     p.add_argument("--out", default="logs", help="output directory (default: logs)")
     p.add_argument("--ndjson", choices=["on", "off"], default="on", help="enable NDJSON logging")
@@ -98,8 +98,10 @@ async def main():
 
     serial_out = None
     if args.serial_out:
-        port, baud_s = args.serial_out.split(":")
-        serial_out = SerialOut(port.strip(), int(baud_s))
+        parts = args.serial_out.split(":")
+        port = parts[0].strip()
+        baud = int(parts[1]) if len(parts) > 1 and parts[1].strip() else 115200
+        serial_out = SerialOut(port, baud)
 
         
 
@@ -169,7 +171,7 @@ async def main():
             encoding="utf-8"
         )
 
-    print("SSP-BRIDGE v0.3.2")
+    print("SSP-BRIDGE v0.4.0")
     print(f"Plugin: {plugin.id} - {plugin.name}")
     print(f"Capabilities: {cap_path if cap_path else 'off'}")
     print(f"NDJSON: {nd_path if nd else 'off'}")

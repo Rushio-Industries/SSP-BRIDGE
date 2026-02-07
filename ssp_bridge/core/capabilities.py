@@ -99,3 +99,9 @@ CAPABILITIES_AMS2 = {
     "schema": "ssp/0.2",
     "signals": dict(_BASE_SIGNALS),
 }
+
+CAPABILITIES_BEAMNG = {
+    "plugin": "beamng",
+    "schema": "ssp/0.2",
+    "signals": dict(_BASE_SIGNALS),
+}

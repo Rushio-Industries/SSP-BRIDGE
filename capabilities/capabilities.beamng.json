@@ -1,5 +1,5 @@
 {
-  "plugin": "ams2",
+  "plugin": "beamng",
   "schema": "ssp/0.2",
   "signals": {
     "engine.rpm": {
