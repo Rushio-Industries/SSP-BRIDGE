@@ -1,6 +1,6 @@
 # SSP-BRIDGE CLI Reference
 
-This document describes command-line options for **SSP-BRIDGE v0.4.0**.
+This document describes command-line options for **SSP-BRIDGE v0.4.x**.
 
 ---
 
@@ -21,6 +21,7 @@ Selects the simulator plugin.
 * `ac` — Assetto Corsa
 * `acc` — Assetto Corsa Competizione
 * `ams2` — Automobilista 2 (UDP / SMS protocol)
+* `beamng` — BeamNG.drive (OutGauge UDP, default port 4444)
 * `auto` — auto-detect (ACC → AC → AMS2 when valid telemetry is detected)
 
 Default: `ac`

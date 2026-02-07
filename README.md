@@ -10,16 +10,15 @@ The project focuses on **runtime stability, dynamic simulator switching, and cap
 
 ## 🚦 Project Status
 
-**v0.4.0 – Hardware-Ready Telemetry & Unified Outputs**
+**v0.4.1 – BeamNG Plugin & Hardware-Oriented Signals**
 
 * ✅ **Dynamic Auto-detect** (Switches games at runtime without restart)
 * ✅ **Process-Aware** (Smart detection for AC/ACC on Windows)
 * ✅ **Runtime Status Events** (`waiting`, `active`, `lost`)
 * ✅ **Capabilities Handshake** (Full signal map on connect/switch)
-* ✅ **Smarter Probing** (Active only on real telemetry data)
-* ✅ **NDJSON & WebSocket Outputs**
-* ✅ **Serial Output (NDJSON over USB)** for microcontrollers
-* ✅ **Normalized RPM Signals** (`engine.rpm_max`, `engine.rpm_pct`)
+* ✅ **NDJSON & WebSocket** (With sticky state support)
+* ✅ **Derived Engine Signals** (`engine.rpm_max`, `engine.rpm_pct`)
+* ✅ **BeamNG.drive Support** (`--game beamng` via OutGauge UDP)
 
 ---
 
@@ -39,14 +38,14 @@ Sim racing telemetry is fragmented: each simulator exposes data differently, mak
 ## 🧩 Architecture Overview
 
 ```text
-Simulator (AC, ACC, AMS2)
+Simulator (AC, ACC, AMS2, BeamNG)
         ↓
    SSP-BRIDGE  ←  (State Machine: Waiting / Active / Lost)
         ↓
  Universal SSP Frame (NDJSON / WebSocket / Serial)
         ↓
 Dashboards · Tools · Hardware · Analytics
-```
+````
 
 **Key principles:**
 
@@ -70,6 +69,10 @@ Dashboards · Tools · Hardware · Analytics
 
 * **Detection:** UDP telemetry (SMS / Project CARS protocol).
 
+### BeamNG.drive (BeamNG)
+
+* **Detection:** Process-aware (Windows) + UDP OutGauge telemetry.
+
 ---
 
 ## 📤 Outputs
@@ -92,26 +95,31 @@ Dashboards · Tools · Hardware · Analytics
 
 ---
 
-## 📐 SSP Frame Example (v0.4.0)
+## 📐 SSP Frame Example (v0.4.1)
 
-**1. Capabilities Handshake (On Connect/Switch):**
+### Capabilities Handshake
 
 ```json
 {
   "type": "capabilities",
-  "schema": "ssp/0.2",
+  "ts": 1769902700.90,
   "source": "acc",
+  "schema": "ssp/0.2",
   "capabilities": {
-    "engine.rpm": { "type": "int", "min": 0 },
-    "engine.rpm_max": { "type": "int", "min": 0 },
-    "engine.rpm_pct": { "type": "float", "min": 0.0, "max": 1.0 },
-    "vehicle.speed_kmh": { "type": "float" },
-    "drivetrain.gear": { "type": "int" }
+    "plugin": "acc",
+    "schema": "ssp/0.2",
+    "signals": {
+      "engine.rpm": { "type": "integer", "unit": "rpm" },
+      "engine.rpm_max": { "type": "integer", "unit": "rpm" },
+      "engine.rpm_pct": { "type": "number", "unit": "%", "min": 0, "max": 100 },
+      "vehicle.speed_kmh": { "type": "number", "unit": "km/h" },
+      "drivetrain.gear": { "type": "integer" }
+    }
   }
 }
 ```
 
-**2. Telemetry Frame (Active):**
+### Telemetry Frame
 
 ```json
 {
@@ -121,7 +129,7 @@ Dashboards · Tools · Hardware · Analytics
   "signals": {
     "engine.rpm": 7200,
     "engine.rpm_max": 8000,
-    "engine.rpm_pct": 0.9,
+    "engine.rpm_pct": 90.0,
     "vehicle.speed_kmh": 145.5,
     "drivetrain.gear": 4,
     "controls.throttle_pct": 100.0,
@@ -152,77 +160,37 @@ Microcontrollers may parse only the signals they need (for example, `engine.rpm_
 ### Requirements
 
 * Python **3.12+**
-* A supported simulator (AC, ACC, or AMS2)
+* A supported simulator
 
-### Steps
-
-1. **Install dependencies:**
+### Run
 
 ```bash
-pip install -r requirements.txt
-```
-
-2. **Run the bridge (Auto-detect Recommended):**
-
-```bash
-# Automatically switches between AC, ACC, and AMS2
 py app.py --game auto
 ```
 
-3. **Force a specific simulator:**
-
 ```bash
-py app.py --game ac
-py app.py --game acc
-py app.py --game ams2
+py app.py --game beamng
 ```
 
 ---
 
 ## 🔄 Runtime Model
 
-SSP-BRIDGE runs as a persistent state machine to ensure client stability:
-
-> **waiting** → **active** → **lost** → **waiting**
-
-* **Waiting:** No simulator detected.
-* **Active:** Telemetry flowing.
-* **Lost:** Simulator disconnected or stalled (events are deduplicated).
-
----
-
-## 🛠️ Development Philosophy
-
-* Minimal dependencies
-* Explicit, readable code
-* No hidden magic
-* Built to scale from software → hardware
+> **waiting → active → lost → waiting**
 
 ---
 
 ## 🗺️ Roadmap (High Level)
 
-* ✅ v0.2: Plugin loader and CLI (`--game ac`, `--game auto`)
-* ✅ v0.3: Additional simulators (AMS2 / ACC)
-* v0.4: Hardware-oriented outputs (serial ✅ / UDP ⏳)
+* ✅ v0.2: Plugin loader and CLI
+* ✅ v0.3: Multi-simulator support (AC / ACC / AMS2)
+* ✅ v0.4: Hardware-friendly signals + BeamNG
+* v0.5+: More simulators and richer telemetry
 * v1.0: Stable SSP specification and SDKs
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome — especially:
-
-* New simulator plugins (iRacing, rFactor 2)
-* Dashboard integrations
-* Hardware examples (Arduino, ESP32)
-* Documentation improvements
 
 ---
 
 ## 📄 License
 
 MIT License
-
 © Rushio Industries
-

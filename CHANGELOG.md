@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.4.1
+
+### Added
+- BeamNG.drive plugin (`--game beamng`) using official OutGauge UDP telemetry.
+- BeamNG integrated into dynamic runtime auto-detect (conservative probing).
+
+### Improved
+- Hardware-oriented derived signals remain consistent across supported sims:
+  - `engine.rpm_max`
+  - `engine.rpm_pct`
+
+### Notes
+- No breaking changes to telemetry schema (`ssp/0.2`).
+- Clients should treat missing signals as “not available” (not zero).
+
 ## v0.4.0
 
 ### Added

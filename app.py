@@ -171,7 +171,7 @@ async def main():
             encoding="utf-8"
         )
 
-    print("SSP-BRIDGE v0.4.0")
+    print("SSP-BRIDGE v0.4.1")
     print(f"Plugin: {plugin.id} - {plugin.name}")
     print(f"Capabilities: {cap_path if cap_path else 'off'}")
     print(f"NDJSON: {nd_path if nd else 'off'}")
